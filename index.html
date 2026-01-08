@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SCMS Study Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
+        .card { background: white; padding: 20px; margin: 10px auto; width: 300px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .value { font-size: 2em; font-weight: bold; color: #2196F3; }
+        .status-live { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>SCMS Live Dashboard</h1>
+    <p class="status-live">● System Connected</p>
+    
+    <div class="card">
+        <p>Temperature</p>
+        <div id="temp" class="value">--</div><span>°C</span>
+    </div>
+
+    <div class="card">
+        <p>Focus Status</p>
+        <div id="status" class="value">Waiting...</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmpXrg4DnoW2aH6BFLYERZpF-a_sOQsjw",
+            authDomain: "scms-db4c9.firebaseapp.com",
+            databaseURL: "https://scms-db4c9-default-rtdb.firebaseio.com",
+            projectId: "scms-db4c9",
+            storageBucket: "scms-db4c9.firebasestorage.app",
+            messagingSenderId: "593690444818",
+            appId: "1:593690444818:web:6bf24f444529f71d2144cb"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        db.ref("study").on("value", (snapshot) => {
+            const data = snapshot.val();
+            document.getElementById("temp").innerText = data.temp.toFixed(1);
+            document.getElementById("status").innerText = data.fidgeting ? "FIDGETING!" : "FOCUSING";
+            document.getElementById("status").style.color = data.fidgeting ? "red" : "green";
+        });
+    </script>
+</body>
+</html>
