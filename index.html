@@ -6,6 +6,7 @@
     <title>SCMS Professional Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -35,10 +36,20 @@
             overflow: hidden;
         }
 
+        /* Added: Styling for the Graph Container */
+        .chart-container {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            max-width: 1200px;
+            margin: 30px auto;
+            height: 400px;
+        }
+
         .label { font-size: 0.8rem; font-weight: 700; color: #636e72; text-transform: uppercase; letter-spacing: 1px; }
         .value { font-size: 3rem; font-weight: bold; margin: 15px 0; color: #2d3436; }
         
-        /* Alert States */
         .card.alert-red { background: var(--danger); color: white; transform: translateY(-5px); }
         .card.alert-yellow { background: var(--warning); transform: translateY(-5px); }
         .card.alert-red .label, .card.alert-red .value { color: white; }
@@ -76,6 +87,10 @@
         </div>
     </div>
 
+    <div class="chart-container">
+        <canvas id="liveChart"></canvas>
+    </div>
+
     <p id="last-sync">Waiting for cloud data...</p>
 
     <script>
@@ -87,15 +102,48 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("study");
 
+        // --- ADDED: Initialize the Chart ---
+        const ctx = document.getElementById('liveChart').getContext('2d');
+        const liveChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        borderColor: '#ff7675',
+                        backgroundColor: 'rgba(255, 118, 117, 0.1)',
+                        data: [],
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        borderColor: '#55efc4',
+                        backgroundColor: 'rgba(85, 239, 196, 0.1)',
+                        data: [],
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+
         db.on("value", (snapshot) => {
             const data = snapshot.val();
             if(!data) return;
 
-            // Update Values
+            // Update Values (Your Original Logic)
             document.getElementById("temp").innerText = data.temp.toFixed(1);
             document.getElementById("humid").innerText = data.humidity.toFixed(0);
             
-            // 1. Temperature Alert (matches ESP32 32°C limit)
+            // 1. Temperature Alert
             const tCard = document.getElementById("temp-card");
             if(data.temp > 32) {
                 tCard.classList.add("alert-red");
@@ -105,7 +153,7 @@
                 document.getElementById("temp-msg").innerText = "Optimal";
             }
 
-            // 2. Light Alert (1 = Dark)
+            // 2. Light Alert
             const lCard = document.getElementById("light-card");
             const lVal = document.getElementById("light-val");
             if(data.light == 1) {
@@ -116,7 +164,7 @@
                 lVal.innerText = "BRIGHT ☀️";
             }
 
-            // 3. Motion Alert (Fidgeting)
+            // 3. Motion Alert
             const mCard = document.getElementById("motion-card");
             const mVal = document.getElementById("motion-val");
             if(data.fidgeting) {
@@ -127,8 +175,24 @@
                 mVal.innerText = "FOCUSED";
             }
 
+            // --- ADDED: Update the Graph ---
+            const now = new Date().toLocaleTimeString();
+            
+            // Keep graph to 15 data points for clarity
+            if (liveChart.data.labels.length > 15) {
+                liveChart.data.labels.shift();
+                liveChart.data.datasets[0].data.shift();
+                liveChart.data.datasets[1].data.shift();
+            }
+
+            liveChart.data.labels.push(now);
+            liveChart.data.datasets[0].data.push(data.temp);
+            liveChart.data.datasets[1].data.push(data.humidity);
+            liveChart.update();
+
             document.getElementById("last-sync").innerText = "Last Update: " + new Date().toLocaleTimeString();
         });
     </script>
 </body>
 </html>
+
