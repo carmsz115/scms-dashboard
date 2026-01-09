@@ -36,7 +36,6 @@
             overflow: hidden;
         }
 
-        /* Added: Styling for the Graph Container */
         .chart-container {
             background: var(--card-bg);
             padding: 20px;
@@ -44,7 +43,7 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
             max-width: 1200px;
             margin: 30px auto;
-            height: 400px;
+            height: 450px;
         }
 
         .label { font-size: 0.8rem; font-weight: 700; color: #636e72; text-transform: uppercase; letter-spacing: 1px; }
@@ -102,7 +101,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref("study");
 
-        // --- ADDED: Initialize the Chart ---
+        // Initialize Chart with 4 Datasets
         const ctx = document.getElementById('liveChart').getContext('2d');
         const liveChart = new Chart(ctx, {
             type: 'line',
@@ -110,28 +109,44 @@
                 labels: [],
                 datasets: [
                     {
-                        label: 'Temperature (°C)',
+                        label: 'Temp (°C)',
                         borderColor: '#ff7675',
-                        backgroundColor: 'rgba(255, 118, 117, 0.1)',
                         data: [],
                         tension: 0.4,
-                        fill: true
+                        fill: false
                     },
                     {
-                        label: 'Humidity (%)',
+                        label: 'Humid (%)',
                         borderColor: '#55efc4',
-                        backgroundColor: 'rgba(85, 239, 196, 0.1)',
                         data: [],
                         tension: 0.4,
-                        fill: true
+                        fill: false
+                    },
+                    {
+                        label: 'Light Alert',
+                        borderColor: '#fdcb6e',
+                        data: [],
+                        stepped: true, // Creates a square wave
+                        fill: false
+                    },
+                    {
+                        label: 'Motion Alert',
+                        borderColor: '#a29bfe',
+                        data: [],
+                        stepped: true,
+                        fill: false
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero: false } }
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        max: 100 // Set max to 100 to fit all data types
+                    } 
+                }
             }
         });
 
@@ -139,11 +154,11 @@
             const data = snapshot.val();
             if(!data) return;
 
-            // Update Values (Your Original Logic)
+            // 1. Update Numerical Values (Original Logic)
             document.getElementById("temp").innerText = data.temp.toFixed(1);
             document.getElementById("humid").innerText = data.humidity.toFixed(0);
             
-            // 1. Temperature Alert
+            // 2. Temp Card Alerts
             const tCard = document.getElementById("temp-card");
             if(data.temp > 32) {
                 tCard.classList.add("alert-red");
@@ -153,7 +168,7 @@
                 document.getElementById("temp-msg").innerText = "Optimal";
             }
 
-            // 2. Light Alert
+            // 3. Light Card Alerts
             const lCard = document.getElementById("light-card");
             const lVal = document.getElementById("light-val");
             if(data.light == 1) {
@@ -164,7 +179,7 @@
                 lVal.innerText = "BRIGHT ☀️";
             }
 
-            // 3. Motion Alert
+            // 4. Motion Card Alerts
             const mCard = document.getElementById("motion-card");
             const mVal = document.getElementById("motion-val");
             if(data.fidgeting) {
@@ -175,19 +190,21 @@
                 mVal.innerText = "FOCUSED";
             }
 
-            // --- ADDED: Update the Graph ---
+            // 5. Update the Graph with all 4 values
             const now = new Date().toLocaleTimeString();
-            
-            // Keep graph to 15 data points for clarity
-            if (liveChart.data.labels.length > 15) {
+            if (liveChart.data.labels.length > 20) {
                 liveChart.data.labels.shift();
-                liveChart.data.datasets[0].data.shift();
-                liveChart.data.datasets[1].data.shift();
+                liveChart.data.datasets.forEach(d => d.data.shift());
             }
 
             liveChart.data.labels.push(now);
             liveChart.data.datasets[0].data.push(data.temp);
             liveChart.data.datasets[1].data.push(data.humidity);
+            
+            // For Alerts: We send '25' if true, '0' if false so they jump on the graph
+            liveChart.data.datasets[2].data.push(data.light == 1 ? 25 : 0);
+            liveChart.data.datasets[3].data.push(data.fidgeting ? 25 : 0);
+            
             liveChart.update();
 
             document.getElementById("last-sync").innerText = "Last Update: " + new Date().toLocaleTimeString();
@@ -195,4 +212,5 @@
     </script>
 </body>
 </html>
+
 
